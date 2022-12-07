@@ -1,5 +1,6 @@
-from ast import Param
+#from ast import Param
 from datetime import date, datetime, timedelta
+from dataclasses import dataclass
 from typing import List, Tuple
 import os
 
@@ -10,51 +11,68 @@ autor Anton Kralin
 version 1.0
 """
 
+@dataclass
 class FileType:
-    def __init(self, path: str = '', filename: str = '', date: datetime = datetime.today()):
+    """
+    class for representation file in folders
+    :param path: str (path to file) 
+    :param filename: str (file name) 
+    :param date: (date, time last edit time) datetime
+    """
+    path: str = ''
+    filename: str = ''
+    when: datetime = datetime.today()
+
+    def __init__(self, path: str = '', filename: str = '',
+                 datet: datetime = datetime.today()):
         """
-        :param path: str (path to file) filename: str (file name) date: (date, time last edit time) datetime
+        :param path: str (path to file)
+        :param filename: str (file name)
+        :param date: (date, time last edit time) datetime
         :return: None
         """
-        self.__path = path
-        self.__filename = filename
-        self.__date = date
-    
-    @property
-    def path(self) -> str:
-        return self.__path
-    
-    @path.setter
-    def path(self, path: str):
-        self.__path = path
-        
-    @property
-    def filename(self) -> str:
-        return self.__filename
-    
-    @filename.setter
-    def filename(self, filename: str):
-        self.__filename = filename
-        
-    @property    
-    def date(self) -> datetime:
-        return self.__date
-    
-    @date.setter
-    def date(self, date: datetime):
-        self.__date = date
+        self.path = path
+        self.filename = filename
+        self.when = datet
 
+@dataclass
+class SaveKeeping:
+    """
+    :param year: bool = True create year copy
+    :param year_count: int = 3 count year copy for safe
+    :param month: bool = True create month copy
+    :param month_count: int = 12 count month copy for safe
+    :param week: bool = True create week copy
+    :param week_count: int = 4 count week copy for safe
+    :param day: bool = True create day copy
+    :param day_count: bool = 7 count day copy for safe
+    :param move: bool = True true-move, false - copy
+    :param del_empty_folder: bool = True delete empty folder
+    """
+    year: bool = True
+    year_count: int = 3
+    month: bool = True
+    month_count: int = 12
+    week: bool = True
+    week_count: int = 4
+    day: bool = True
+    day_count: int = 7
+    move: bool = True
+    del_empty_folder: bool = True
 
 class FileRotate:
+    """class for 
+    """
+    
     def __init__(self, path_from: str, path_to: str, keep_day: int = 7, del_empty_folder: bool = True, move: bool = True):
         """
         :param path_from: str (path to folder where is file to rotate) path_to: str (path to folder where will be files after rotate)
-            keep_day: int=7 (how day keep in rotate folder) del_empty_folder: bool=True (delete empty folder after delete files)
-            move: bool=True (move file if True, Copy file if False from path where is file to rotate)
+        :keep_day: int=7 (how day keep in rotate folder) del_empty_folder: bool=True (delete empty folder after delete files)
+        :move: bool=True (move file if True, Copy file if False from path where is file to rotate)
         :return: None
         """
-        self.__path_from = self.form_path(path_from)
-        self.__path_to = self.form_path(path_to)   
+        self.__path_from = self._form_path(path_from)
+        self.__path_to = self._form_path(path_to)   
         self.__keep_day = keep_day
         self.__del_empty_folder = del_empty_folder
         self.__move = move
