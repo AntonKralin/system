@@ -48,6 +48,7 @@ class SaveKeeping:
     :param day_count: bool = 7 count day copy for safe
     :param move: bool = True true-move, false - copy
     :param del_empty_folder: bool = True delete empty folder
+    :param deep_find: int = 0 Deep to find file
     """
     year: bool = True
     year_count: int = 3
@@ -59,6 +60,7 @@ class SaveKeeping:
     day_count: int = 7
     move: bool = True
     del_empty_folder: bool = True
+    deep_fild: int = 0
 
 class FileRotate:
     """class for 
@@ -120,14 +122,27 @@ class FileRotate:
         """
         return self.__ignore_file          
     
-    def _create_dir(self, path: str):
+    def _create_dir(self, path: str) -> None:
+        """Create folder from path
+
+        Args:
+            path (str): path to folder
+        """
         try:
             if not os.path.exists(path):
                 os.makedirs(path)
         except OSError:
             return "Error on create directory"
         
-    def _form_path(self, path: str):
+    def _form_path(self, path: str) -> str:
+        """formation path to file(folder) and return this string
+
+        Args:
+            path (str): path to file(folder)
+
+        Returns:
+            str: 
+        """
         mass_folder = list()
         if path.find('/'):
             mass_folder = path.split('/')
@@ -181,17 +196,17 @@ class FileRotate:
         file = FileType(c_path[0], c_path[1], dates)
         return file
     
-    def dir_find_file(self, path: str, deep_find: int, deep: int = 0) -> List:
+    def dir_find_file(self, path: str, deep: int = 0) -> List:
         """Search file in folder and return list path to files
 
         Args:
             path (str): path to find
-            deep_find (int): max deep find file
             deep (int, optional): current deep
 
         Returns:
             List: array path (str) to files
         """
+        deep_find =  self.keep.deep_fild
         if os.path.isdir(path):
             mass_files = list()
             
@@ -208,11 +223,22 @@ class FileRotate:
             return mass_files
         return None
 
-    def del_old_file(self, deep_find):
+    def _check_keep_file(self, file: FileType) -> bool:
+        """check need file to keep
+
+        Args:
+            file (FileType): file to check
+
+        Returns:
+            bool: True - need keep, False - need delete
+        """
+        pass
+
+    def del_old_file(self):
         """dell file
 
         Args:
-            deep_find (_type_): _description_
+            
         """
-        l_files = self.dir_find_file(self.path_to, deep_find)
+        l_files = self.dir_find_file(self.path_to )
         
