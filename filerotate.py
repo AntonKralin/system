@@ -294,6 +294,27 @@ class FileRotate:
                 return False
             return True
         return False
+    
+    def _week_rotate(self, year: int = datetime.today().year) -> None:
+        today = date.today()
+        for i_path in os.listdir(os.path.join(self.path_to, year)):
+            if i_path.find("week"):
+                new_path = os.path.join(self.path_to, i_path)
+                for i_file in os.listdir(new_path):
+                    file_path = os.path.join(new_path, i_file)
+                    ftype = self.get_file(file_path)
+                    date_between  = today - ftype.when
+                    week_befo  = date_between.day % 7
+                    if not self._check_keep_file_week(ftype):
+                        os.remove(file_path)
+                        continue
+                    save_path = os.path.join(self.path_to, ftype.when.year,
+                                            "week" + week_befo)
+                    self._create_dir(save_path)
+                    shutil.copyfile(file_path,
+                                    os.path.join(save_path, ftype.filename))
+                    os.remove(file_path)
+                    
 
     def del_old_file(self) -> None:
         """dell file in path_to
@@ -336,6 +357,7 @@ class FileRotate:
     def begin_rotate(self) -> None:
         """start rotate file"""
         f_list = self.dir_find_file(self.path_to)
+        today = date.today()
         for i_file in f_list:
             #day copy
             if self.keep.day and self._check_keep_file_day(i_file):
@@ -348,7 +370,10 @@ class FileRotate:
                     os.remove(os.path.join(i_file.path, i_file.filename))
             #week copy
             if self.keep.week and self._check_keep_file_week(i_file):
-                save_path = os.path.join(self.path_to, i_file.when.year)
+                date_between  = today - i_file.when
+                week_befo  = date_between.day % 7
+                save_path = os.path.join(self.path_to, i_file.when.year,
+                                         "week" + week_befo)
                 self._create_dir(save_path)
                 shutil.copyfile(os.path.join(i_file.path, i_file.filename),
                                 os.path.join(save_path, i_file.filename))
