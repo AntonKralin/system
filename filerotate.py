@@ -262,7 +262,7 @@ class FileRotate:
             return True
         return False
     
-    def _check_keep_file_month(self, file: FileType) -> bool:
+    def _check_keep_file_month(self, file: FileType, remove: bool = False) -> bool:
         """check need file to month keep
 
         Args:
@@ -276,7 +276,26 @@ class FileRotate:
             today = date.today()
             if fdate + timedelta(days=self.keep.month_count * 30) < today:
                 return False
-            return True
+            save_path = os.path.join(self.path_to,
+                                     str(file.when.year), str(file.when.month))
+            if not os.path.exists(save_path):
+                return True
+            count = 0
+            for i_file in os.listdir(save_path):
+                #if i_file != file.filename:
+                #    continue
+                i_path = os.path.join(save_path, i_file)
+                if os.path.isfile(i_path):
+                    count += 1
+                    buf_file = self.get_file(i_path)
+                    if buf_file.when > file.when:
+                        return False
+                    else:
+                        if remove:
+                            os.remove(i_path)
+                        return True
+            if count == 0:
+                return True
         return False
     
     def _check_keep_file_year(self, file: FileType, remove: bool = False) -> bool:
@@ -298,13 +317,15 @@ class FileRotate:
                 return True
             count = 0
             for i_file in os.listdir(save_path):
+                #if i_file != file.filename:
+                #    continue
                 i_path = os.path.join(save_path, i_file)
                 if os.path.isfile(i_path):
                     count += 1
                     buf_file = self.get_file(i_path)
                     if buf_file.when > file.when:
                         return False
-                    else:     
+                    else:
                         if remove:
                             os.remove(i_path)
                         return True
