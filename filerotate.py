@@ -262,7 +262,7 @@ class FileRotate:
             return True
         return False
     
-    def _check_keep_file_month(self, file: FileType, remove: bool = False) -> bool:
+    def _check_keep_file_month(self, file: FileType) -> bool:
         """check need file to month keep
 
         Args:
@@ -276,29 +276,10 @@ class FileRotate:
             today = date.today()
             if fdate + timedelta(days=self.keep.month_count * 30) < today:
                 return False
-            save_path = os.path.join(self.path_to,
-                                     str(file.when.year), str(file.when.month))
-            if not os.path.exists(save_path):
-                return True
-            count = 0
-            for i_file in os.listdir(save_path):
-                #if i_file != file.filename:
-                #    continue
-                i_path = os.path.join(save_path, i_file)
-                if os.path.isfile(i_path):
-                    count += 1
-                    buf_file = self.get_file(i_path)
-                    if buf_file.when > file.when:
-                        return False
-                    else:
-                        if remove:
-                            os.remove(i_path)
-                        return True
-            if count == 0:
-                return True
+            return True
         return False
-    
-    def _check_keep_file_year(self, file: FileType, remove: bool = False) -> bool:
+
+    def _check_keep_file_year(self, file: FileType) -> bool:
         """check need file to year keep and delete oldest year copy
 
         Args:
@@ -308,32 +289,17 @@ class FileRotate:
             bool: True - need keep, False - need delete
         """
         if self.keep.year:
-            fdate = file.when.date()
-            today = date.today()
-            if fdate.year + self.keep.year < today.year:
-                return False
-            save_path = os.path.join(self.path_to, str(file.when.year))
-            if not os.path.exists(save_path):
+            if file.when.year + self.keep.year_count > date.today().year:
                 return True
-            count = 0
-            for i_file in os.listdir(save_path):
-                #if i_file != file.filename:
-                #    continue
-                i_path = os.path.join(save_path, i_file)
-                if os.path.isfile(i_path):
-                    count += 1
-                    buf_file = self.get_file(i_path)
-                    if buf_file.when > file.when:
-                        return False
-                    else:
-                        if remove:
-                            os.remove(i_path)
-                        return True
-            if count == 0:
-                return True
+            return False
         return False
     
     def _week_rotate(self, year: int = datetime.today().year) -> None:
+        """rotate week file in year folder
+
+        Args:
+            year (int, optional): year where we rotate week copy Defaults to datetime.today().year.
+        """
         today = date.today()
         for i_path in os.listdir(os.path.join(self.path_to, year)):
             if i_path.find("week"):
@@ -342,17 +308,74 @@ class FileRotate:
                     file_path = os.path.join(new_path, i_file)
                     ftype = self.get_file(file_path)
                     date_between  = today - ftype.when
-                    week_befo  = date_between.day % 7
+                    week_befo  = date_between.day // 7
                     if not self._check_keep_file_week(ftype):
                         os.remove(file_path)
                         continue
                     save_path = os.path.join(self.path_to, ftype.when.year,
                                             "week" + week_befo)
                     self._create_dir(save_path)
-                    shutil.copyfile(file_path,
+                    shutil.copy2(file_path,
                                     os.path.join(save_path, ftype.filename))
                     os.remove(file_path)
                     
+    def _cp_old(self, path_to: str, path_from:str) -> None:
+        """cp and keep oldest file
+
+        Args:
+            path_to (str): where save sile
+            path_from (str): from where folder
+        """
+        for i_file in os.listdir(path_from):
+            path_file = os.path.join(path_from, i_file)
+            if os.path.isfile(path_file):
+                shutil.copy2(path_file, os.path.join(path_to, i_file))
+                
+        old_file = None
+        for i_file in os.listdir(path_to):
+            path_file = os.path.join(path_to, i_file)
+            if os.path.isfile(path_file):
+                buf_file = self.get_file(path_file)
+                if old_file:
+                    if old_file.when.date() > buf_file.when.date():
+                        old_file = buf_file
+                else:
+                    old_file = buf_file
+
+        for i_file in os.listdir(path_to):
+            path_file = os.path.join(path_to, i_file)
+            if os.path.isfile(path_file):
+                buf_file = self.get_file(path_file)
+                if buf_file.when.date() < old_file.when.date():
+                    os.remove(path_file)
+        
+    def _ym_rotate(self) -> None:
+        """rotate year, month, week copy
+        """
+        today = date.today()
+        for i_year in reversed(range(today.year)):
+            year_path = os.path.join(self.path_to, str(i_year))
+            if os.path.exists(year_path):
+                old_file = None
+                for i_month in range(1, 12):
+                    month_path = os.path.join(year_path, str(i_month))
+                    for i_day in range(1, 31):
+                        day_path = os.path.join(month_path, str(i_day))
+                        for i_file in os.listdir(day_path):
+                            file_path = os.path.join(day_path, i_file)
+                            if os.path.isfile(file_path):
+                                buf_file = self.get_file(file_path)
+                                if not old_file:
+                                    old_file = self.get_file(file_path)
+                                    continue
+                                if old_file.when < buf_file.when:
+                                    old_file = buf_file
+                    if old_file:
+                        self._cp_old(month_path, old_file.path)
+                if old_file:
+                    self._cp_old(year_path, old_file)
+            else:
+                break
 
     def del_old_file(self) -> None:
         """dell file in path_to
@@ -395,7 +418,6 @@ class FileRotate:
     def begin_rotate(self) -> None:
         """start rotate file"""
         f_list = self.dir_find_file(self.path_from)
-        today = datetime.today()
         self.del_old_file()
         for i_file in f_list:
             #day copy
@@ -408,35 +430,9 @@ class FileRotate:
                                 os.path.join(save_path, i_file.filename))
                 if self.keep.move:
                     os.remove(os.path.join(i_file.path, i_file.filename))
-            #week copy
-            if self.keep.week and self._check_keep_file_week(i_file):
-                date_between  = today - i_file.when
-                week_befo  = date_between.days % 7
-                save_path = os.path.join(self.path_to, str(i_file.when.year),
-                                         "week" + str(week_befo))
-                self._create_dir(save_path)
-                shutil.copy2(os.path.join(i_file.path, i_file.filename),
-                                os.path.join(save_path, i_file.filename))
-                if self.keep.move:
-                    os.remove(os.path.join(i_file.path, i_file.filename))
-            #month copy
-            if self.keep.month and self._check_keep_file_month(i_file):
-                save_path = os.path.join(self.path_to, str(i_file.when.year),
-                                         str(i_file.when.month))
-                self._create_dir(save_path)
-                shutil.copy2(os.path.join(i_file.path, i_file.filename),
-                                os.path.join(save_path, i_file.filename))
-                if self.keep.move:
-                    os.remove(os.path.join(i_file.path, i_file.filename))
-            #year copy
-            if self._check_keep_file_year(i_file, True):
-                save_path = os.path.join(self.path_to, str(i_file.when.year))
-                self._create_dir(save_path)
-                shutil.copy2(os.path.join(i_file.path, i_file.filename),
-                                os.path.join(save_path, i_file.filename))
-                if self.keep.move:
-                    os.remove(os.path.join(i_file.path, i_file.filename))
-
+        
+        self._ym_rotate()
+        
         if self.keep.del_empty_folder:
             self.del_empty_dirs(self.path_from)
             self.del_empty_dirs(self.path_to)
