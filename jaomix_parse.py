@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
-import ebooklib
+#import ebooklib
+import time
 from ebooklib import epub
 
 
@@ -78,6 +79,9 @@ if __name__ == "__main__":
     i = 0
     for text_ch in gen_ch:
         i += 1
+        #print(i)
+        #if i % 10 == 0:
+        #    time.sleep(5)
         c1 = epub.EpubHtml(title="ch " + str(i),
                            file_name=str(i)+'.xhtml',
                            lang='ru')
